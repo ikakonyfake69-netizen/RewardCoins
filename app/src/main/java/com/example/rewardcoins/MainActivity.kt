@@ -5,24 +5,41 @@ import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.example.rewardcoins.ui.theme.RewardCoinsTheme
+import com.google.android.gms.ads.AdError
 import com.google.android.gms.ads.AdRequest
+import com.google.android.gms.ads.FullScreenContentCallback
+import com.google.android.gms.ads.LoadAdError
 import com.google.android.gms.ads.MobileAds
 import com.google.android.gms.ads.rewarded.RewardedAd
 import com.google.android.gms.ads.rewarded.RewardedAdLoadCallback
-import com.google.android.gms.ads.LoadAdError
-import com.google.android.gms.ads.FullScreenContentCallback
-import com.google.android.gms.ads.AdError
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.launch
+
+private val Fondo = Color(0xFF111827)
+private val Tarjeta = Color(0xFF1F2937)
+private val Morado = Color(0xFF7C3AED)
+private val Dorado = Color(0xFFFBBF24)
 
 class MainActivity : ComponentActivity() {
 
     private var rewardedAd: RewardedAd? = null
+
+    private lateinit var monedasDataStore: MonedasDataStore
 
     private val adUnitId =
         "ca-app-pub-3940256099942544/5224354917"
@@ -32,6 +49,14 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        monedasDataStore = MonedasDataStore(applicationContext)
+
+        lifecycleScope.launch {
+            monedasDataStore.monedas.collect { saldoGuardado ->
+                monedas = saldoGuardado
+            }
+        }
 
         setContent {
             RewardCoinsTheme {
@@ -53,12 +78,10 @@ class MainActivity : ComponentActivity() {
     private fun cargarAnuncio() {
         cargando = true
 
-        val adRequest = AdRequest.Builder().build()
-
         RewardedAd.load(
             this,
             adUnitId,
-            adRequest,
+            AdRequest.Builder().build(),
             object : RewardedAdLoadCallback() {
 
                 override fun onAdLoaded(ad: RewardedAd) {
@@ -85,10 +108,11 @@ class MainActivity : ComponentActivity() {
                 override fun onAdFailedToLoad(error: LoadAdError) {
                     rewardedAd = null
                     cargando = false
+
                     Toast.makeText(
                         this@MainActivity,
-                        "Error al cargar anuncio: ${error.message}",
-                        Toast.LENGTH_LONG
+                        "No se pudo cargar el anuncio",
+                        Toast.LENGTH_SHORT
                     ).show()
                 }
             }
@@ -103,13 +127,16 @@ class MainActivity : ComponentActivity() {
             cargando = true
 
             anuncio.show(this) {
-                monedas += 50
 
-                Toast.makeText(
-                    this,
-                    "¡Ganaste 50 monedas!",
-                    Toast.LENGTH_SHORT
-                ).show()
+                lifecycleScope.launch {
+                    monedasDataStore.agregarMonedas(50)
+
+                    Toast.makeText(
+                        this@MainActivity,
+                        "¡Ganaste 50 monedas!",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
             }
         } else {
             Toast.makeText(
@@ -131,40 +158,147 @@ fun PantallaPrincipal(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(24.dp),
-        verticalArrangement = Arrangement.Center,
+            .background(Fondo)
+            .verticalScroll(rememberScrollState())
+            .padding(20.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-
-        Text(
-            text = "RewardCoins",
-            style = MaterialTheme.typography.headlineLarge
-        )
 
         Spacer(modifier = Modifier.height(24.dp))
 
         Text(
-            text = "Monedas acumuladas",
-            style = MaterialTheme.typography.titleMedium
+            text = "🪙 RewardCoins",
+            color = Color.White,
+            fontSize = 30.sp,
+            fontWeight = FontWeight.Bold
         )
 
         Text(
-            text = "🪙 $monedas",
-            style = MaterialTheme.typography.displayLarge
+            text = "Gana monedas viendo anuncios",
+            color = Color.LightGray,
+            fontSize = 14.sp
         )
 
         Spacer(modifier = Modifier.height(32.dp))
 
-        Button(
-            onClick = onVerAnuncio,
-            enabled = !cargando
-        ) {
-            Text(
-                if (cargando)
-                    "Cargando anuncio..."
-                else
-                    "Ver anuncio y ganar 50 monedas"
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(24.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = Color(0xFF251B43)
             )
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(30.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+
+                Text(
+                    text = "TU SALDO ACTUAL",
+                    color = Color(0xFFC4B5FD),
+                    fontSize = 14.sp
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Text(
+                    text = "🪙",
+                    fontSize = 55.sp
+                )
+
+                Text(
+                    text = "$monedas",
+                    color = Color.White,
+                    fontSize = 52.sp,
+                    fontWeight = FontWeight.Bold
+                )
+
+                Text(
+                    text = "Monedas acumuladas",
+                    color = Color.LightGray
+                )
+            }
         }
+
+        Spacer(modifier = Modifier.height(28.dp))
+
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(24.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = Tarjeta
+            )
+        ) {
+            Column(
+                modifier = Modifier.padding(22.dp)
+            ) {
+
+                Text(
+                    text = "🎁 Recompensa diaria",
+                    color = Color.White,
+                    fontSize = 22.sp,
+                    fontWeight = FontWeight.Bold
+                )
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                Text(
+                    text = "Mira un anuncio de prueba y gana monedas virtuales.",
+                    color = Color.LightGray,
+                    fontSize = 14.sp
+                )
+
+                Spacer(modifier = Modifier.height(20.dp))
+
+                Surface(
+                    color = Color(0xFF31215D),
+                    shape = RoundedCornerShape(14.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        text = "+50 🪙 por anuncio completado",
+                        color = Dorado,
+                        fontWeight = FontWeight.Bold,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(16.dp)
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(20.dp))
+
+                Button(
+                    onClick = onVerAnuncio,
+                    enabled = !cargando,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(56.dp),
+                    shape = RoundedCornerShape(14.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Morado,
+                        contentColor = Color.White
+                    )
+                ) {
+                    Text(
+                        text = if (cargando)
+                            "Cargando anuncio..."
+                        else
+                            "▶ Ver anuncio y ganar",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(28.dp))
+
+        Text(
+            text = "✓ Anuncios de prueba de Google AdMob",
+            color = Color(0xFF34D399),
+            fontSize = 12.sp,
+            textAlign = TextAlign.Center
+        )
     }
 }

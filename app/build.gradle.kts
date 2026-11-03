@@ -53,6 +53,7 @@ dependencies {
     debugImplementation(libs.androidx.compose.ui.tooling)
     implementation("com.google.android.gms:play-services-ads:24.9.0")
     implementation("com.google.android.gms:play-services-ads:24.9.0")
+    implementation("androidx.datastore:datastore-preferences:1.1.7")
 
 
 }
